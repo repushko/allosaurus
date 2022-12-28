@@ -9,7 +9,7 @@ from allosaurus.model import resolve_model_name, get_all_models
 from argparse import Namespace
 
 
-def read_recognizer(inference_config_or_name='latest', alt_model_path=None):
+def read_recognizer(inference_config_or_name='latest', alt_model_path=None, return_embeddings: bool = False):
     if alt_model_path:
         if not alt_model_path.exists():
             download_model(inference_config_or_name, alt_model_path)
@@ -44,17 +44,19 @@ def read_recognizer(inference_config_or_name='latest', alt_model_path=None):
     # create lm (language model: logits -> phone)
     lm = read_lm(model_path, inference_config)
 
-    return Recognizer(pm, am, lm, inference_config)
+    return Recognizer(pm, am, lm, inference_config, return_embeddings=return_embeddings)
 
 
 class Recognizer:
 
-    def __init__(self, pm, am, lm, config):
+    def __init__(self, pm, am, lm, config, return_embeddings: bool = False):
 
         self.pm = pm
         self.am = am
         self.lm = lm
         self.config = config
+
+        self._return_embeddings = return_embeddings
 
     def is_available(self, lang_id):
         # check whether this lang id is available
@@ -64,10 +66,22 @@ class Recognizer:
     def recognize(self, filename, lang_id='ipa', topk=1, emit=1.0, timestamp=False, phoneme=False):
 
         # run acoustic model
-        batch_lprobs = self.get_logits(filename, lang_id).numpy()
+        acoustic_outputs = self.get_logits(filename, lang_id)
+        if self._return_embeddings:
+            batch_lprobs, encoder_output = acoustic_outputs
+            batch_lprobs = batch_lprobs.numpy()
+            encoder_output = encoder_output.numpy()
+        else:
+            batch_lprobs = acoustic_outputs.numpy()
 
-        token = self.lm.compute(batch_lprobs[0], lang_id, topk, emit=emit, timestamp=timestamp, phoneme=phoneme)
-        return token
+        outputs = self.lm.compute(batch_lprobs[0], lang_id, topk, emit=emit, timestamp=timestamp, phoneme=phoneme, return_indexes=self._return_embeddings)
+
+        if self._return_embeddings:
+            tokens, indexes = outputs
+            return tokens, encoder_output[0, indexes, :]
+        else:
+            return outputs
+
 
     def get_logits(self, filename, lang_id='ipa'):
 
@@ -89,11 +103,15 @@ class Recognizer:
 
         meta = {'lang_id': lang_id, 'device_id': self.config.device_id}
 
-        tensor_batch_lprobs = self.am(tensor_batch_feat, tensor_batch_feat_len, meta=meta)
+        acoustic_model_outputs = self.am(
+            tensor_batch_feat,
+            tensor_batch_feat_len,
+            meta=meta,
+            return_embeddings=self._return_embeddings
+        )
 
-        if self.config.device_id >= 0:
-            batch_lprobs = tensor_batch_lprobs.cpu().detach()
+        if self._return_embeddings:
+            batch_lprobs, encoder_output = acoustic_model_outputs
+            return batch_lprobs.cpu().detach(), encoder_output.cpu().detach()
         else:
-            batch_lprobs = tensor_batch_lprobs.detach()
-
-        return batch_lprobs
+            return acoustic_model_outputs.cpu().detach()

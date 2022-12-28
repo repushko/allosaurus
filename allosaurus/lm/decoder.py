@@ -43,7 +43,7 @@ class PhoneDecoder:
         else:
             return self.model_path / 'inventory' / lang_id
 
-    def compute(self, logits, lang_id=None, topk=1, emit=1.0, timestamp=False, phoneme=False):
+    def compute(self, logits, lang_id=None, topk=1, emit=1.0, timestamp=False, phoneme=False, return_indexes: bool = False):
         """
         decode phones from logits
 
@@ -119,5 +119,8 @@ class PhoneDecoder:
             phones = ' '.join(decoded_seq)
         else:
             phones = ' | '.join(decoded_seq)
+
+        if return_indexes:
+            return phones, emit_frame_idx
 
         return phones

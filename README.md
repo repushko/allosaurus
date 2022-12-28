@@ -308,8 +308,72 @@ python -m allosaurus.run -i=sample.wav --lang=eng --prior=prior.txt
 $ python -m allosaurus.run -i=sample.wav --lang=eng --prior=prior.txt 
 æ l u s f ɔ ɹ s
 ```
-
 The first example reduces one phone and the second example adds a new phone.
+
+### Embedding gathering
+
+To return not only phonemes, but embeddings too, you need to pass `return_embeddings=True` inside `read_recognizer` function.
+
+Example:
+
+```python
+model = read_recognizer('interspeech21', return_embeddings=True)
+phonemes, embeddings = model.recognize('sample.wav')
+```
+
+Output embeddings are numpy array with shape `(N, EmbedingSize)`, where `N` is number of phonemes in output sequence, and `EmbeddingSize` is embedding size for current model (e.g. `256` for `interspeech21` model)
+
+### Compute averaged embeddings
+
+To compute averaged embeddings for each phoneme, you can use `gather_embeddings.py` script.
+
+```bash
+usage: gather_embeddings.py [-h] -src SRC_DIR [-m MODEL_NAME] [-out OUT_FILENAME]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -src SRC_DIR, --src_dir SRC_DIR
+                        Source directory (where .wav files stored) for phoneme embedding computation. 
+  -m MODEL_NAME, --model_name MODEL_NAME
+                        Name of allosaurus model to use. (default: interspeech21)
+  -out OUT_FILENAME, --out_filename OUT_FILENAME
+                        Filename for output phoneme-to-embedding mapping. (default: phoneme_to_embedding_mapping.pkl)
+```
+
+Usage example:
+
+```bash
+python ./allosaurus/scripts/gather_embeddings.py -src path/to/some/directory/
+```
+
+This script will produce:
+
+- File with embedding for each phoneme in each .wav audio-file in directory (`wav_file_name.emb.pkl`)
+- File with all embeddings, grouped by phoneme (`aggregated_embeddings.emb.pkl`)
+- File with averaged embeddings (configured by `--out_filename` in script).
+
+Example of 2d PCA projection of averaged embeddings for some dataset:
+![img.png](images/img.png)
+
+Example of 2d UMAP projection of embeddings for some dataset:
+
+![img.png](images/img2.png)
+
+### Embeddings file format
+
+All files saved using pickle, and you can easily un-pickle them:
+
+```python
+import pickle 
+
+with open("phoneme_to_embedding_mapping.pkl", "rb") as file:
+    mapping = pickle.load(file)
+```
+
+- `phoneme_to_embedding_mapping.pkl` - This file contains `Dict[str, np.array]`, where keys are phonemes, and values are averaged embeddings.
+- `aggregated_embeddings.emb.pkl` - This file contains `Dict[str, List[np.array]]`, where keys are phonemes, and values are list of embeddings.
+- `wav_file_name.emb.pkl` - This file contains `Tuple[str, List[np.array]]`, where first element is output of `allosaurus` (phonemes), and second element is list of embeddings of phonemes, stored in first element.
+
 
 ## Fine-Tuning
 We notice that the pretrained models might not be accurate enough for some languages, 

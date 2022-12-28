@@ -147,10 +147,9 @@ class CompositionalPhoneticsModel(nn.Module):
         if self.normalize_before:
             self.norm = nn.LayerNorm(config.hidden_size)
 
-
         self.logsoftmax = nn.LogSoftmax(dim=2)
 
-    def forward(self, input_tensor, input_lengths, meta=None):
+    def forward(self, input_tensor, input_lengths, meta=None, return_embeddings: bool = False):
         """
 
         :param input: an Tensor with shape (B,T,H)
@@ -200,6 +199,7 @@ class CompositionalPhoneticsModel(nn.Module):
             attn_weights['enc_block_%d' % i] = attn_weight
 
         if self.normalize_before:
+            # Embeddings stored here!
             enc_output = self.norm(enc_output)
 
         # return enc_output, mask, attn_weights
@@ -242,4 +242,6 @@ class CompositionalPhoneticsModel(nn.Module):
         #print("in - target length", target_lengths.shape)
 
         # return (B,T,H) for gathering
+        if return_embeddings:
+            return output_tensor, enc_output
         return output_tensor
