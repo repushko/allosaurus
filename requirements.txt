@@ -2,10 +2,10 @@ scipy
 numpy
 resampy
 panphon
-torch
+torch==1.8.1
 editdistance
 requests
 tqdm
 pyyaml
-torchaudio
+torchaudio==0.9.0
 
