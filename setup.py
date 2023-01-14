@@ -14,8 +14,8 @@ setup(
       'numpy',
       'resampy',
       'panphon',
-      'torch',
+      'torch==1.8.1',
       'editdistance',
-      'torchaudio',
+      'torchaudio==0.9.0',
    ]
 )
