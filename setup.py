@@ -10,12 +10,12 @@ setup(
    packages=find_packages(),
    include_package_data=True,
    install_requires=[
-      'scipy',
-      'numpy',
-      'resampy',
-      'panphon',
-      'torch',
-      'editdistance',
-      'torchaudio',
+      'scipy==1.10.1',
+      'numpy==1.24.4',
+      'resampy=0.4.2',
+      'panphon==0.20.0',
+      'torch==2.0.1',
+      'editdistance==0.6.2',
+      'torchaudio==2.0.2',
    ]
 )
